@@ -3,8 +3,7 @@
 
 <img width="639" height="166" alt="image" src="https://github.com/user-attachments/assets/cb7c5b44-dea5-454b-96e5-4d77cb047dc6" />
 
-SpiritBox™ is a stateless, secure containment system for isolating malware/files locally on endpoints in real time, safely. Designed for ultra-fast response and zero-trust file handling, SpiritBox monitors for specified file events and instantly transfers suspicious files into an ephemeral, encrypted container. From there, analysts can safely inspect the file in a hardened shell environment without risk of compromise. The system is self-destructing, stateless, and hardened against both traditional and quantum threats.
-
+SpiritBox™ is a stateless, transient, secure extraction and containment service for isolating malware or other files directly on endpoints in real time. Designed for ultra-fast containment and absolute zero-trust file handling, SpiritBox monitors for specified file hashes (and/or a folder path) and instantly extracts that suspicious file (or files) into a nested container. From there, professionals can safely inspect the file in a hardened shell environment with minimal to no risk of compromise. SpiritBox is also auto-ephemral by design. Once analysis is completed, SpiritBox auto-deletes itself (containers, files, scripts, exes, everything) and leaves only a single log file ("sbox-log.txt"), leaving little traces of it ever existing.
 ---
 
 ## ⚙️ Key Features & Design Philosophy
