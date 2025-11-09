@@ -1,45 +1,82 @@
-"""Containment agent responsible for isolating captured files."""
+"""Heuristic agent responsible for runtime threat monitoring."""
 from __future__ import annotations
 
-import shutil
-import stat
-from pathlib import Path
-from typing import Optional
+from dataclasses import dataclass
+from typing import Iterable, List, Sequence
 
-from .base import Agent, AgentRuntimeError, HealthState
+from .analysis import AnalysisReport
+from .base import Agent, HealthState
 
 
-class ContainmentAgent(Agent):
-    agent_id = "containment_agent"
-    title = "Capture & Isolation Agent"
+@dataclass(frozen=True)
+class HeuristicAlert:
+    """Alert raised by the heuristic agent when suspicious behaviour is detected."""
 
-    def __init__(self, base_dir: Path) -> None:
+    severity: str
+    message: str
+
+
+class HeuristicAgent(Agent):
+    """Runtime behaviour and threat monitoring for the analysis container."""
+
+    agent_id = "heuristic_agent"
+    title = "Runtime Behavior & Threat Monitoring"
+
+    def __init__(self) -> None:
         super().__init__()
-        self.base_dir = base_dir
-        self.capture_dir: Optional[Path] = None
 
-    def prepare(self) -> Path:
-        self.capture_dir = self.base_dir / "capture"
-        if self.capture_dir.exists():
-            shutil.rmtree(self.capture_dir)
-        self.capture_dir.mkdir(parents=True, exist_ok=True)
-        self.set_state(HealthState.HEALTHY, "Capture directory prepared")
-        return self.capture_dir
+    def evaluate(self, report: AnalysisReport) -> List[HeuristicAlert]:
+        """Generate heuristic alerts based on an analysis report."""
 
-    def isolate(self, source: Path) -> Path:
-        if not self.capture_dir:
-            raise AgentRuntimeError("Capture directory not prepared")
-        if not source.exists():
-            raise AgentRuntimeError(f"Source file missing: {source}")
+        alerts: List[HeuristicAlert] = []
 
-        destination = self.capture_dir / source.name
-        shutil.copy2(source, destination)
-        destination.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
-        self.set_state(HealthState.HEALTHY, "File isolated", file=destination.name)
-        return destination
+        alerts.extend(self._entropy_checks(report))
+        alerts.extend(self._size_checks(report))
+        alerts.extend(self._signature_checks(report))
 
-    def teardown(self) -> None:
-        if self.capture_dir and self.capture_dir.exists():
-            shutil.rmtree(self.capture_dir)
-        self.capture_dir = None
-        self.set_state(HealthState.HEALTHY, "Containment cleared")
+        if alerts:
+            self.set_state(
+                HealthState.ALERT,
+                "; ".join(alert.message for alert in alerts),
+                file=report.file_path.name,
+            )
+        else:
+            self.set_state(HealthState.HEALTHY, "No anomalies detected", file=report.file_path.name)
+
+        return alerts
+
+    @staticmethod
+    def _entropy_checks(report: AnalysisReport) -> Iterable[HeuristicAlert]:
+        if report.entropy >= 7.5:
+            yield HeuristicAlert(
+                severity="alert",
+                message="High entropy suggests packed or encrypted payload",
+            )
+        elif report.entropy <= 1.0 and report.file_size > 0:
+            yield HeuristicAlert(
+                severity="warning",
+                message="Extremely low entropy detected",
+            )
+
+    @staticmethod
+    def _size_checks(report: AnalysisReport) -> Iterable[HeuristicAlert]:
+        if report.file_size == 0:
+            yield HeuristicAlert(severity="warning", message="Captured file is empty")
+        elif report.file_size > 50 * 1024 * 1024:  # 50 MiB heuristic limit
+            yield HeuristicAlert(severity="warning", message="Large payload captured (>50 MiB)")
+
+    @staticmethod
+    def _signature_checks(report: AnalysisReport) -> Iterable[HeuristicAlert]:
+        suspicious_tokens: Sequence[str] = (
+            "mimikatz",
+            "ransom",
+            "payload",
+            "shellcode",
+        )
+        lower_name = report.file_path.name.lower()
+        for token in suspicious_tokens:
+            if token in lower_name:
+                yield HeuristicAlert(
+                    severity="alert",
+                    message=f"Filename indicator detected: '{token}'",
+                )

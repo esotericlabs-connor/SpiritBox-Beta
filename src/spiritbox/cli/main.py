@@ -11,7 +11,7 @@ from cmd import Cmd
 from pathlib import Path
 from typing import Optional
 
-from ..runtime.controller import SpiritBoxConfig, SpiritBoxController
+from ..runtime.controller import SpiritBoxConfig, SpiritBoxController, SpiritBoxState
 from .banner import load_banner
 
 
@@ -84,6 +84,11 @@ class SpiritBoxShell(Cmd):
         future = asyncio.run_coroutine_threadsafe(self.controller.start(), self.loop)
         future.result()
         self._monitoring_active = True
+        state = self.controller.state()
+        if state.ssh_port:
+            print(f"[+] Bridge online via SSH port {state.ssh_port}. Awaiting file match.")
+        else:
+            print("[+] Monitoring active. Awaiting file match.")       
 
     def do_deactivate(self, arg: str) -> None:
         """Stop monitoring for files."""
@@ -147,6 +152,19 @@ class SpiritBoxShell(Cmd):
         self.loop.close()
 
     @staticmethod
+    def _render_status(state: SpiritBoxState) -> None:
+        print("\nContainer Stack:")
+        for container in state.containers:
+            detail = container.detail or "Idle"
+            print(f"- {container.name}: {detail}")
+            print(f"    {container.description}")
+            for agent in container.agents:
+                agent_detail = f" - {agent.detail}" if agent.detail else ""
+                print(f"    [{agent.state}] {agent.title}{agent_detail}")
+
+        if state.ssh_port:
+            print(f"\nSSH Bridge Port: {state.ssh_port}")
+
     def _render_status(state) -> None:
         print("\nAgent Health States:")
         for status in (
