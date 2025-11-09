@@ -1,12 +1,10 @@
-"""Containment agent responsible for isolating captured files."""
+"""Containment agent responsible for isolating captured files using native C++ runtime."""
 from __future__ import annotations
 
-import shutil
-import stat
 from pathlib import Path
-from typing import Optional
 
 from .base import Agent, AgentRuntimeError, HealthState
+from ..native import InMemoryCapture, load_containment_library
 
 
 class ContainmentAgent(Agent):
@@ -16,30 +14,41 @@ class ContainmentAgent(Agent):
     def __init__(self, base_dir: Path) -> None:
         super().__init__()
         self.base_dir = base_dir
-        self.capture_dir: Optional[Path] = None
+        self.session_name = f"spiritbox_capture_{id(self):x}"
+        self._captures: list[InMemoryCapture] = []
+        self._library = load_containment_library()
+        self._prepared = False
 
     def prepare(self) -> Path:
-        self.capture_dir = self.base_dir / "capture"
-        if self.capture_dir.exists():
-            shutil.rmtree(self.capture_dir)
-        self.capture_dir.mkdir(parents=True, exist_ok=True)
-        self.set_state(HealthState.HEALTHY, "Capture directory prepared")
-        return self.capture_dir
+        self._captures.clear()
+        self._prepared = True
+        self.set_state(HealthState.HEALTHY, "In-memory containment runtime prepared")
+        # Return a synthetic path representing the capture namespace for status reporting.
+        return self.base_dir / "capture"
 
     def isolate(self, source: Path) -> Path:
-        if not self.capture_dir:
-            raise AgentRuntimeError("Capture directory not prepared")
+        if not self._prepared:
+            raise AgentRuntimeError("Containment runtime not prepared")
         if not source.exists():
             raise AgentRuntimeError(f"Source file missing: {source}")
 
-        destination = self.capture_dir / source.name
-        shutil.copy2(source, destination)
-        destination.chmod(stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
-        self.set_state(HealthState.HEALTHY, "File isolated", file=destination.name)
-        return destination
+        capture = self._library.isolate(source, self.session_name)
+        self._captures.append(capture)
+        isolated_path = capture.path
+        self.set_state(
+            HealthState.HEALTHY,
+            "File isolated in sealed memfd",
+            file=source.name,
+        )
+        return isolated_path
 
     def teardown(self) -> None:
-        if self.capture_dir and self.capture_dir.exists():
-            shutil.rmtree(self.capture_dir)
-        self.capture_dir = None
-        self.set_state(HealthState.HEALTHY, "Containment cleared")
+        for capture in self._captures:
+            try:
+                capture.close()
+            except Exception:
+                continue
+        self._captures.clear()
+        self._prepared = False
+        self.set_state(HealthState.HEALTHY, "In-memory containment cleared")
+
