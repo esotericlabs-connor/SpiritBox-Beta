@@ -1,0 +1,1 @@
+"""SpiritBox CLI package."""

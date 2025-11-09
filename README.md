@@ -67,3 +67,39 @@ SpiritBox™ is a stateless, transient, secure extraction and containment servic
 git clone https://github.com/exoteriklabs/SpiritBox.git
 cd SpiritBox
 ./install.sh
+
+## Prototype CLI
+
+The current repository provides a Python-based prototype of the SpiritBox console.
+It models the agent manifest from `AGENTS.md` and wires each agent into an orchestrated
+workflow that can be exercised from a terminal session.
+
+### Running the CLI
+
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -e .
+spiritbox --banner cli/assets/banner.txt  # Optional custom banner path
+```
+
+Within the console you can:
+
+- `set_conjure <folder> <sha256>` — configure the watch path and expected hash.
+- `activate` — start monitoring for the target file.
+- `status` — inspect agent health, the most recent analysis report, and heuristic alerts.
+- `export` — write the session log (`sbox-log.txt`) to the SpiritBox workspace.
+- `self_destruct` — tear down the workspace and exit.
+
+### Agent Wiring
+
+- **Monitoring Agent** polls the configured folder and triggers on the matching SHA-256.
+- **Containment Agent** stages the captured file inside an isolated workspace folder.
+- **Analysis Agent** performs lightweight static checks (hash, entropy, mock AV/YARA).
+- **Heuristic Agent** raises alerts for suspicious findings (e.g., high entropy).
+- **Logging Agent** records every event and exports `sbox-log.txt`.
+- **Cleanup Agent** erases the workspace to honor the zero-persistence requirement.
+
+This implementation focuses on the control plane and in-memory orchestration described
+in the agent manifest. Containerization, virtualization, and advanced tooling can be layered
+on top of this foundation in subsequent iterations.
