@@ -42,7 +42,8 @@ class SpiritBoxShell(Cmd):
         """Show current agent health and last analysis report."""
 
         state = self.controller.state()
-        self._render_status(state)
+        self._render_container_status(state)
+        self._render_agent_health(state)
 
     def do_set_conjure(self, arg: str) -> None:
         """Configure SpiritBox watch path and hash.
@@ -152,7 +153,7 @@ class SpiritBoxShell(Cmd):
         self.loop.close()
 
     @staticmethod
-    def _render_status(state: SpiritBoxState) -> None:
+    def _render_container_status(state: SpiritBoxState) -> None:
         print("\nContainer Stack:")
         for container in state.containers:
             detail = container.detail or "Idle"
@@ -165,7 +166,8 @@ class SpiritBoxShell(Cmd):
         if state.ssh_port:
             print(f"\nSSH Bridge Port: {state.ssh_port}")
 
-    def _render_status(state) -> None:
+    @staticmethod
+    def _render_agent_health(state: SpiritBoxState) -> None:
         print("\nAgent Health States:")
         for status in (
             state.monitoring,
