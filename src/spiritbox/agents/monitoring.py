@@ -17,8 +17,12 @@ class MonitorConfig:
     poll_interval: float = 1.0
 
     def __post_init__(self) -> None:
+        if self.watch_path.is_file():
+            self.watch_path = self.watch_path.parent
         if not self.watch_path.exists():
-            raise AgentConfigError(f"Watch path does not exist: {self.watch_path}")
+            raise AgentConfigError(
+                f"Watch path does not exist: {self.watch_path}. Provide a folder or quoted path if it contains spaces."
+            )
         if not self.watch_path.is_dir():
             raise AgentConfigError("Watch path must be a directory")
         if len(self.expected_hash) != 64:

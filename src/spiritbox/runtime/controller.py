@@ -31,6 +31,12 @@ class SpiritBoxState:
     """Aggregated view of SpiritBox runtime state."""
 
     containers: Tuple[ContainerState, ...]
+    monitoring: AgentStatus
+    containment: AgentStatus
+    analysis: AgentStatus
+    heuristic: AgentStatus
+    logging: AgentStatus
+    cleanup: AgentStatus
     last_report: Optional[AnalysisReport] = None
     last_alerts: Tuple[HeuristicAlert, ...] = tuple()
     ssh_port: Optional[int] = None
@@ -124,6 +130,12 @@ class SpiritBoxController:
         ssh_port = self._middle.ssh_port if self._middle else None
         return SpiritBoxState(
             containers=containers,
+            monitoring=self._middle.bridge.info() if self._middle else self._placeholder_monitoring(),
+            containment=self._inner.containment.info() if self._inner else self._placeholder_containment(),
+            analysis=self._middle.analysis.info() if self._middle else self._placeholder_analysis(),
+            heuristic=self._middle.heuristic.info() if self._middle else self._placeholder_heuristic(),
+            logging=self._middle.logging.info() if self._middle else self._placeholder_logging(),
+            cleanup=self._outer.cleanup.info() if self._outer else self._placeholder_cleanup(),
             last_report=self._report,
             last_alerts=self._alerts,
             ssh_port=ssh_port,
@@ -208,4 +220,59 @@ class SpiritBoxController:
             description=ExtractionDetonationContainer.description,
             detail="Not configured",
             agents=agents,
+        )
+    
+    
+    @staticmethod
+    def _placeholder_monitoring() -> AgentStatus:
+        return AgentStatus(
+            agent_id="bridge_agent",
+            title="Container 1 to container 2 SSH bridge",
+            state=HealthState.WARNING,
+            detail="Not configured",
+        )
+
+    @staticmethod
+    def _placeholder_containment() -> AgentStatus:
+        return AgentStatus(
+            agent_id="containment_agent",
+            title="Capture & Isolation Agent",
+            state=HealthState.WARNING,
+            detail="Not configured",
+        )
+
+    @staticmethod
+    def _placeholder_analysis() -> AgentStatus:
+        return AgentStatus(
+            agent_id="analysis_agent",
+            title="Analyst Shell & Static Analysis Tools",
+            state=HealthState.WARNING,
+            detail="Not configured",
+        )
+
+    @staticmethod
+    def _placeholder_heuristic() -> AgentStatus:
+        return AgentStatus(
+            agent_id="heuristic_agent",
+            title="Runtime Behavior & Threat Monitoring",
+            state=HealthState.WARNING,
+            detail="Not configured",
+        )
+
+    @staticmethod
+    def _placeholder_logging() -> AgentStatus:
+        return AgentStatus(
+            agent_id="logging_agent",
+            title="Session Forensics Logger",
+            state=HealthState.WARNING,
+            detail="Not configured",
+        )
+
+    @staticmethod
+    def _placeholder_cleanup() -> AgentStatus:
+        return AgentStatus(
+            agent_id="cleanup_agent",
+            title="Container Teardown & Ephemeral Self-Destruct",
+            state=HealthState.WARNING,
+            detail="Not configured",
         )
