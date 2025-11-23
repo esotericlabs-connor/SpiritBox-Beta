@@ -282,6 +282,10 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     if _maybe_launch_dedicated_window(args):
         return 0
+    
+    banner = load_banner(args.banner)
+    shell = SpiritBoxShell(banner)
+
     try:
         shell.cmdloop()
     except KeyboardInterrupt:  # pragma: no cover - interactive convenience
