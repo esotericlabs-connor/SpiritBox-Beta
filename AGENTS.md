@@ -1,3 +1,8 @@
+CURRENT ISSUES:
+
+We need to fix why the app window closes immediately after running, priority one. 
+
+
 Please follow according to this manifest: 
 
 SpiritBox™ is a stateless, transient, and ephemeral file/malware extraction, containment and detonation service for isolating malware or other files directly on endpoints in real time. Designed for ultra-fast containment and absolute zero-trust file handling, SpiritBox monitors for specified file hashes (and/or a folder path) and instantly extracts that suspicious file (or files) into a nested container. From there, professionals can safely inspect the file in a hardened shell environment with minimal to no risk of compromise. SpiritBox is also auto-ephemral by design. Once analysis is completed, SpiritBox auto-deletes itself (containers, files, scripts, exes, everything) and leaves only a single log file ("sbox-log.txt"), leaving little traces of it ever existing.
